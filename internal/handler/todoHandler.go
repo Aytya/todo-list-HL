@@ -1,35 +1,17 @@
-package main
+package handler
 
 import (
 	"encoding/json"
-	"fmt"
+	"github.com/Aytya/todo-list-HL/internal/domain"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/gorilla/mux"
-	"github.com/thedevsaddam/renderer"
 	"log"
 	"net/http"
 	"sort"
 	"time"
 )
 
-var rnd *renderer.Render
-
-type (
-	TodoModel struct {
-		ID       string `json:"id"`
-		Title    string `json:"title"`
-		ActiveAt string `json:"activeAt"`
-		Status   string `json:"status"`
-	}
-)
-
-func init() {
-	fmt.Println("init function running")
-
-	rnd = renderer.New()
-}
-
-var todos []TodoModel
+var todos []domain.TodoModel
 
 func isUnique(title, activeAt string) bool {
 	for _, t := range todos {
@@ -40,7 +22,7 @@ func isUnique(title, activeAt string) bool {
 	return true
 }
 
-func findById(id string) (*TodoModel, int) {
+func findById(id string) (*domain.TodoModel, int) {
 	for i, todo := range todos {
 		if todo.ID == id {
 			return &todo, i
@@ -49,7 +31,7 @@ func findById(id string) (*TodoModel, int) {
 	return nil, -1
 }
 
-func sortTodos(todos []TodoModel) {
+func sortTodos(todos []domain.TodoModel) {
 	sort.Slice(todos, func(i, j int) bool {
 		activeDateI, err := time.Parse("2006-01-02", todos[i].ActiveAt)
 		if err != nil {
@@ -63,7 +45,7 @@ func sortTodos(todos []TodoModel) {
 	})
 }
 
-func addWeekendPrefix(todos []TodoModel) {
+func addWeekendPrefix(todos []domain.TodoModel) {
 	for i, todo := range todos {
 		activeDate, err := time.Parse("2006-01-02", todo.ActiveAt)
 		if err != nil {
@@ -76,13 +58,24 @@ func addWeekendPrefix(todos []TodoModel) {
 	}
 }
 
-func addTodo(w http.ResponseWriter, r *http.Request) {
+// AddTodo
+// @Summary      add newTodo
+// @Tags         todo
+// @Accept       json
+// @Produce      json
+// @Param		 input body domain.TodoModel true "todoModel request"
+// @Success      200  {object}  domain.TodoModel
+// @Failure      400  {object}  response.Object
+// @Failure      404  {object}  response.Object
+// @Failure      500  {object}  response.Object
+// @Router       /tasks [post]
+func AddTodo(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var newTodo TodoModel
+	var newTodo domain.TodoModel
 	err := json.NewDecoder(r.Body).Decode(&newTodo)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -111,16 +104,31 @@ func addTodo(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(newTodo)
 }
 
-func updateTodo(w http.ResponseWriter, r *http.Request) {
+// UpdateTodo
+// @Summary      update todo by id
+// @Tags         todo
+// @Accept       json
+// @Produce      json
+// @Param 		 id path string true "todo id"
+// @Param		 input body domain.TodoModel true "todoModel request"
+// @Success      204  "No Content"
+// @Failure      400  {object}  response.Object
+// @Failure      404  {object}  response.Object
+// @Failure      500  {object}  response.Object
+// @Router       /tasks/{id} [put]
+func UpdateTodo(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	vars := mux.Vars(r)
-	id := vars["ID"]
+	id := chi.URLParam(r, "ID")
+	if id == "" {
+		http.Error(w, "Invalid or missing ID", http.StatusBadRequest)
+		return
+	}
 
-	var updatedTodo TodoModel
+	var updatedTodo domain.TodoModel
 	err := json.NewDecoder(r.Body).Decode(&updatedTodo)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -149,14 +157,26 @@ func updateTodo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func deleteTodo(w http.ResponseWriter, r *http.Request) {
+// DeleteTodo
+// @Summary      delete todo by id
+// @Tags         todo
+// @Param 		 id path string true "todo id"
+// @Success      204 "No Content"
+// @Failure      400  {object}  response.Object
+// @Failure      404  {object}  response.Object
+// @Failure      500  {object}  response.Object
+// @Router       /tasks/{id} [delete]
+func DeleteTodo(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	vars := mux.Vars(r)
-	id := vars["ID"]
+	id := chi.URLParam(r, "ID")
+	if id == "" {
+		http.Error(w, "Invalid or missing ID", http.StatusBadRequest)
+		return
+	}
 
 	_, index := findById(id)
 	if index == -1 {
@@ -168,16 +188,29 @@ func deleteTodo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func checked(w http.ResponseWriter, r *http.Request) {
+// Checked
+// @Summary      mark todo by id
+// @Tags         todo
+// @Param 		 id path string true "todo id"
+// @Param        input body domain.TodoModel true "Todo Status"
+// @Success      204 "No Content"
+// @Failure      400  {object}  response.Object
+// @Failure      404  {object}  response.Object
+// @Failure      500  {object}  response.Object
+// @Router       /tasks/{id}/done [put]
+func Checked(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	vars := mux.Vars(r)
-	id := vars["ID"]
+	id := chi.URLParam(r, "ID")
+	if id == "" {
+		http.Error(w, "Invalid or missing ID", http.StatusBadRequest)
+		return
+	}
 
-	var checkedTodo TodoModel
+	var checkedTodo domain.TodoModel
 	err := json.NewDecoder(r.Body).Decode(&checkedTodo)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -194,7 +227,17 @@ func checked(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func getTodo(w http.ResponseWriter, r *http.Request) {
+// GetTodo
+// @Summary      get todo
+// @Tags         todo
+// @Produce      json
+// @Param        status query string false "Status of the todo" default(active)
+// @Success      200  {array}  domain.TodoModel
+// @Failure      400  {object}  response.Object
+// @Failure      404  {object}  response.Object
+// @Failure      500  {object}  response.Object
+// @Router       /tasks [get]
+func GetTodo(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -205,7 +248,7 @@ func getTodo(w http.ResponseWriter, r *http.Request) {
 		status = "active"
 	}
 
-	var filteredTodos []TodoModel
+	var filteredTodos []domain.TodoModel
 
 	now := time.Now()
 	for _, todo := range todos {
@@ -237,24 +280,4 @@ func getTodo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(filteredTodos)
-}
-
-func main() {
-	router := mux.NewRouter()
-	router.HandleFunc("/api/todo-list/tasks", addTodo).Methods("POST")
-	router.HandleFunc("/api/todo-list/tasks/{ID}", updateTodo).Methods("PUT")
-	router.HandleFunc("/api/todo-list/tasks/{ID}", deleteTodo).Methods("DELETE")
-	router.HandleFunc("/api/todo-list/tasks/{ID}/done", checked).Methods("PUT")
-	router.HandleFunc("/api/todo-list/tasks/{ID}", getTodo).Methods("GET")
-
-	server := http.Server{
-		Addr:    ":8080",
-		Handler: router,
-	}
-
-	log.Println("Listening on :8080")
-	err := server.ListenAndServe()
-	if err != nil {
-		log.Fatal(err)
-	}
 }

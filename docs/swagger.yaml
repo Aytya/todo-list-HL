@@ -1,0 +1,186 @@
+basePath: /api/todo-list
+definitions:
+  domain.TodoModel:
+    properties:
+      activeAt:
+        type: string
+      id:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+    type: object
+  response.Object:
+    properties:
+      data: {}
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: RESTful API for the TodoList microservice.
+  title: Service for compiling task lists
+  version: "1.0"
+paths:
+  /tasks:
+    get:
+      parameters:
+      - default: active
+        description: Status of the todo
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.TodoModel'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Object'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Object'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Object'
+      summary: get todo
+      tags:
+      - todo
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: todoModel request
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/domain.TodoModel'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.TodoModel'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Object'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Object'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Object'
+      summary: add newTodo
+      tags:
+      - todo
+  /tasks/{id}:
+    delete:
+      parameters:
+      - description: todo id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Object'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Object'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Object'
+      summary: delete todo by id
+      tags:
+      - todo
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: todo id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: todoModel request
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/domain.TodoModel'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Object'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Object'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Object'
+      summary: update todo by id
+      tags:
+      - todo
+  /tasks/{id}/done:
+    put:
+      parameters:
+      - description: todo id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Todo Status
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/domain.TodoModel'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Object'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Object'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Object'
+      summary: mark todo by id
+      tags:
+      - todo
+swagger: "2.0"

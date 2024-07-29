@@ -3,5 +3,5 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN go build -o todo-list main.go
+RUN go build -o todo-list ./cmd/main.go
 CMD ["./todo-list"]
